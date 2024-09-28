@@ -2,12 +2,20 @@ import express from 'express';
 import winston from 'winston';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { AWS, AmazonCognitoIdentity, userPool } from './config.js';
+import { AWS, AmazonCognitoIdentity, userPool,docClient, poolData } from './config.js';
 import { CognitoUserPool, CognitoUserAttribute } from 'amazon-cognito-identity-js';
+
+
+
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 const cognitoidentityserviceprovider = new AWS.CognitoIdentityServiceProvider();
+const userDataTableName = 'users';
+const walletDetailsTable = 'wallet_details';
+const userUploadsTableName = 'userUploads';
+const userBucketName = 'chewyusersavedata';
+const walletTransactionsTable = 'wallet_transactions';
 
 // Middleware
 app.use(cors());
@@ -33,17 +41,19 @@ const logger = winston.createLogger({
 });
 
 
-app.post('/signup', async function(req, res) {
+app.post('/signup', async function (req, res) {
     try {
       const username = req.body.username.toLowerCase();
       const Chewy = 'Chewy';
-      // This will create a unique userId with format "Flash" as Prefix _"Username"_"randoom number" Eg: Flash_srialla_098
-      const referralId = `${Chewy}_${username}_${Math.floor(Math.random() * 1000)}`; 
+      // This will create a unique userId with format "Flash" as Prefix _"Username"_"random number" Eg: Flash_srialla_098
+      const referralId = `${Chewy}_${username}_${Math.floor(Math.random() * 1000)}`;
       const created_date = new Date().toISOString(); // Created date of the user registration
+      
+      // DynamoDB params for checking if username exists
       const checkUserParams = {
         TableName: userDataTableName,
         Key: {
-          user_name: username,
+          email: req.body.email,
         },
       };
   
@@ -53,6 +63,7 @@ app.post('/signup', async function(req, res) {
       if (existingUser.Item) {
         return res.status(409).json({ message: 'Username already exists.' });
       }
+  
       // DynamoDB params for user_data table
       const userDataParams = {
         TableName: userDataTableName,
@@ -64,42 +75,39 @@ app.post('/signup', async function(req, res) {
           created_date: created_date,
         },
       };
-      
+  
       await docClient.put(userDataParams).promise();
-    var userPool = new CognitoUserPool(poolData);
-    logger.info(req.body)
-    const emailAttribute = new CognitoUserAttribute({
-      Name: "email",
-      Value: req.body.email
-  });
   
-//   const phoneNumberAttribute = new CognitoUserAttribute({
-//       Name: "phone_number",
-//       Value: req.body.phoneNumber // Make sure this follows the E.164 format, e.g., '+12345678900'
-//   });
+      var userPool = new CognitoUserPool(poolData);
+      logger.info(req.body);
   
-    var attributeList = [];
-    attributeList.push(emailAttribute);
-    // attributeList.push(phoneNumberAttribute);
+      // Create email attribute for Cognito
+      const emailAttribute = new CognitoUserAttribute({
+        Name: 'email',
+        Value: req.body.email,
+      });
   
-    userPool.signUp(req.body.username, req.body.password, attributeList, null, function(err, result){
+      var attributeList = [];
+      attributeList.push(emailAttribute);
+  
+      // Sign up the user with email only, no phone number
+      userPool.signUp(req.body.username, req.body.password, attributeList, null, function (err, result) {
         if (err) {
-            res.status(500).send(err.message);
-            logger.info(err.message)
-            return;
+          res.status(500).send(err.message);
+          logger.info(err.message);
+          return;
         }
-        const data={
-          status:'Success',
-          message:'User registered successfully'
-        }
+        const data = {
+          status: 'Success',
+          message: 'User registered successfully',
+        };
         res.send(data);
-    });
-  } catch (err) {
-    logger.error(`Error creating user:`, err);
-    res.status(500).send(err.message);
-  }
+      });
+    } catch (err) {
+      logger.error(`Error creating user:`, err);
+      res.status(500).send(err.message);
+    }
   });
-  
   
   
   
@@ -132,7 +140,7 @@ app.post('/signup', async function(req, res) {
     const cognitoUser = new AmazonCognitoIdentity.CognitoUser(userData);
     cognitoUser.confirmRegistration(confirmationCode, true, function(err, result) {
       if (err) {
-          res.status(500).send(err.message);
+          res.status(500).send("User Confirmation failed");
       }
       else{
       const data={
