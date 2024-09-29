@@ -1,2 +1,4 @@
 2024-09-28 14:47:05 info: Server started on http://localhost:5000
 2024-09-28 15:04:13 info: Server started on http://localhost:5000
+{"level":"info","message":"Server started on http://localhost:5000"}
+{"level":"error","message":"Login failed: Incorrect username or password."}
