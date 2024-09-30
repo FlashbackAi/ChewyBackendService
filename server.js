@@ -796,8 +796,12 @@ const privateKey = fs.readFileSync('/etc/letsencrypt/live/52.4.169.223.nip.io/pr
 const certificate = fs.readFileSync('/etc/letsencrypt/live/52.4.169.223.nip.io/fullchain.pem', 'utf8');
 const credentials = { key: privateKey, cert: certificate };
 
-const httpsServer = https.createServer(credentials, app);
+// const httpsServer = https.createServer(credentials, app);
 
-httpsServer.listen(443, () => {
-  console.log('HTTPS Server running on port 443');
+// httpsServer.listen(443, () => {
+//   console.log('HTTPS Server running on port 443');
+// });
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server is running on port ${PORT}`);
 });
