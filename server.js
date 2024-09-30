@@ -1,11 +1,13 @@
-const express = require('express');
-const winston = require('winston');
-const cors = require('cors');
-const dotenv = require('dotenv');
-const { AWS, AmazonCognitoIdentity, userPool, docClient, poolData } = require('./config.js');
-const { CognitoUserPool, CognitoUserAttribute } = require('amazon-cognito-identity-js');
-const { Account, AptosConfig, Aptos, Network, Ed25519PrivateKey, AccountAddress } = require('@aptos-labs/ts-sdk');
-const { aptosConfig } = require('./config.js');
+import express from 'express';
+import winston from 'winston';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import { AWS, AmazonCognitoIdentity, userPool, docClient, poolData } from './config.js';
+import { CognitoUserPool, CognitoUserAttribute } from 'amazon-cognito-identity-js';
+import { Account, AptosConfig, Aptos, Network, Ed25519PrivateKey, AccountAddress } from '@aptos-labs/ts-sdk';
+import { aptosConfig } from './config.js';
+import fs from 'fs';
+import https from 'https';
 
 // import express from 'express';
 // import winston from 'winston';
@@ -805,12 +807,8 @@ const privateKey = fs.readFileSync('/etc/letsencrypt/live/52.4.169.223.nip.io/pr
 const certificate = fs.readFileSync('/etc/letsencrypt/live/52.4.169.223.nip.io/fullchain.pem', 'utf8');
 const credentials = { key: privateKey, cert: certificate };
 
-// const httpsServer = https.createServer(credentials, app);
+const httpsServer = https.createServer(credentials, app);
 
-// httpsServer.listen(443, () => {
-//   console.log('HTTPS Server running on port 443');
-// });
-
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server is running on port ${PORT}`);
+httpsServer.listen(PORT, '0.0.0.0', () => {
+  console.log(`HTTPS Server is running on port ${PORT}`);
 });
