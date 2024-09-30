@@ -484,7 +484,7 @@ app.post('/signup', async function (req, res) {
         // Fetch wallet from DynamoDB
         const result = await docClient.get(params).promise();
 
-        logger.info("Fetched wallet for email:", senderEmail);
+        logger.info(`Fetched wallet for email: ${senderEmail}`);
 
         // If no wallet found, throw an error
         if (!result || !result.Item) {
