@@ -795,20 +795,20 @@ const updateUserDetails = async (email, updateFields) => {
 // });
 
 // Use this for development testing and comment it out when using https for production
-// const server = app.listen(PORT, () => {
-//   logger.info(`Server started on http://localhost:${PORT}`);
-//   server.keepAliveTimeout = 60000; // Increase keep-alive timeout
-//   server.headersTimeout = 65000; // Increase headers timeout
-// });
-
-
-
-const privateKey = fs.readFileSync('/etc/letsencrypt/live/52.4.169.223.nip.io/privkey.pem', 'utf8');
-const certificate = fs.readFileSync('/etc/letsencrypt/live/52.4.169.223.nip.io/fullchain.pem', 'utf8');
-const credentials = { key: privateKey, cert: certificate };
-
-const httpsServer = https.createServer(credentials, app);
-
-httpsServer.listen(PORT, '0.0.0.0', () => {
-  console.log(`HTTPS Server is running on port ${PORT}`);
+const server = app.listen(PORT, () => {
+  logger.info(`Server started on http://localhost:${PORT}`);
+  server.keepAliveTimeout = 60000; // Increase keep-alive timeout
+  server.headersTimeout = 65000; // Increase headers timeout
 });
+
+
+
+// const privateKey = fs.readFileSync('/etc/letsencrypt/live/52.4.169.223.nip.io/privkey.pem', 'utf8');
+// const certificate = fs.readFileSync('/etc/letsencrypt/live/52.4.169.223.nip.io/fullchain.pem', 'utf8');
+// const credentials = { key: privateKey, cert: certificate };
+
+// const httpsServer = https.createServer(credentials, app);
+
+// httpsServer.listen(PORT, '0.0.0.0', () => {
+//   console.log(`HTTPS Server is running on port ${PORT}`);
+// }); 
