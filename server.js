@@ -6,6 +6,8 @@ import { AWS, AmazonCognitoIdentity, userPool,docClient, poolData } from './conf
 import { CognitoUserPool, CognitoUserAttribute } from 'amazon-cognito-identity-js';
 import { Account,AptosConfig, Aptos,Network,Ed25519PrivateKey,AccountAddress } from  '@aptos-labs/ts-sdk';
 import { aptosConfig } from './config.js';
+const https = require('https');
+const fs = require('fs');
 
 
 
@@ -782,8 +784,20 @@ const updateUserDetails = async (email, updateFields) => {
 // });
 
 // Use this for development testing and comment it out when using https for production
-const server = app.listen(PORT, () => {
-  logger.info(`Server started on http://localhost:${PORT}`);
-  server.keepAliveTimeout = 60000; // Increase keep-alive timeout
-  server.headersTimeout = 65000; // Increase headers timeout
+// const server = app.listen(PORT, () => {
+//   logger.info(`Server started on http://localhost:${PORT}`);
+//   server.keepAliveTimeout = 60000; // Increase keep-alive timeout
+//   server.headersTimeout = 65000; // Increase headers timeout
+// });
+
+
+
+const privateKey = fs.readFileSync('/etc/letsencrypt/live/52.4.169.223.nip.io/privkey.pem', 'utf8');
+const certificate = fs.readFileSync('/etc/letsencrypt/live/52.4.169.223.nip.io/fullchain.pem', 'utf8');
+const credentials = { key: privateKey, cert: certificate };
+
+const httpsServer = https.createServer(credentials, app);
+
+httpsServer.listen(443, () => {
+  console.log('HTTPS Server running on port 443');
 });
