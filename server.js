@@ -17,6 +17,7 @@ const userDataTableName = 'users';
 const walletDetailsTable = 'wallet_details';
 const userBucketName = 'chewyusersavedata';
 const walletTransactionsTable = 'wallet_transactions';
+const userCharacterTable = 'user_character_collection'; 
 
 // Aptos and chewy info
 const config = new AptosConfig({ network: Network.MAINNET});
@@ -162,9 +163,12 @@ app.post('/signup', async function (req, res) {
       
       // Call the handleWalletCreation function after the user is confirmed
       await handleWalletCreation(req.body.email);
+      await addCharacterToUser(req.body.email,'Chewy')
   
+
+      logger.info("User confirmed and wallet created successfully");
       // Send success response
-      res.json({ status: 'Success', message: 'User confirmed and wallet created successfully', walletResponse });
+      res.json({ status: 'Success', message: 'User confirmed and wallet created successfully'});
   
     } catch (err) {
       res.status(500).send("User confirmation failed or wallet creation failed");
@@ -238,7 +242,7 @@ app.post('/signup', async function (req, res) {
 
   const checkWalletExists = async (email) => {
     const params = {
-      TableName: 'wallet_details',
+      TableName: walletDetailsTable,
       Key: {
         email: email
       }
@@ -255,7 +259,7 @@ app.post('/signup', async function (req, res) {
 
   const storeWalletInDynamoDB = async (email, walletDetails) => {
     const params = {
-      TableName: 'wallet_details',
+      TableName: walletDetailsTable,
       Item: {
         email: email,
         wallet_address: walletDetails.walletAddress,
@@ -458,7 +462,7 @@ app.post('/signup', async function (req, res) {
 
     // Define the DynamoDB query parameters
     const params = {
-        TableName: 'wallet_details',
+        TableName: walletDetailsTable,
         Key: {
         email: senderEmail
         }
@@ -489,7 +493,7 @@ app.post('/signup', async function (req, res) {
     // Function to update wallet transaction in DynamoDB
 async function updateWalletTransaction(transactionId, senderEmail,recipientEmail, fromAddress, toAddress, amount, transactionStatus, coinType) {
     const params = {
-      TableName: 'wallet_transactions',  // DynamoDB table name
+      TableName: walletTransactionsTable,  // DynamoDB table name
       Item: {
         transaction_id: transactionId,  // Primary key: transaction ID provided by the SDK
         from_email: senderEmail,
@@ -534,7 +538,7 @@ async function updateWalletTransaction(transactionId, senderEmail,recipientEmail
             const accessToken = result.getAccessToken().getJwtToken();
             const decodedCAccessToken = result.getIdToken().decodePayload()
            
-            res.json({ status: 'Success', message: 'Login successful', accessToken, username: decodedToken['cognito:username'] });
+            res.json({ status: 'Success', message: 'Login successful', accessToken, username: decodedCAccessToken['cognito:username'] });
         },
         onFailure: (err) => {
           logger.info(err.message)
@@ -758,7 +762,90 @@ const updateUserDetails = async (email, updateFields) => {
   return result.Attributes;
 };
 
-  
+// API route to add a character
+app.post('/add-character-to-user', async (req, res) => {
+  const { email, character } = req.body;
+
+  logger.info('Received request to add character for email: '+ email);
+
+  // Call the function to add character to DynamoDB
+  const result = await addCharacterToUser(email, character);
+
+  if (result.success) {
+    logger.info('Character added successfully for email: '+ email +'  character: '+character);
+    res.status(200).json({ message: result.message });
+  } else {
+    logger.error('Failed to add character for email: '+ email);
+    res.status(500).json({ error: result.error });
+  }
+});
+
+
+
+// Function to add a character to DynamoDB
+const addCharacterToUser = async (email, character) => {
+  const params = {
+    TableName: userCharacterTable,
+    Item: {
+      email: email,
+      character: character,
+      purchase_date: new Date().toISOString(),  // Using .now() to get the current timestamp
+    },
+  };
+
+  logger.info('Adding character: '+character+' with email: '+ email +' on date: '+ new Date());
+
+  try {
+    // Perform the database operation
+    await docClient.put(params).promise();
+    logger.info('Successfully added character %s to the database', character);
+    return { success: true, message: 'Character added successfully' };
+  } catch (err) {
+    logger.error('Error adding character to DynamoDB: %o', err);
+    return { success: false, error: 'Failed to add character' };
+  }
+};
+
+
+// Function to fetch user count for each character
+const getUserCountByCharacter = async () => {
+  const params = {
+    TableName: userCharacterTable,
+  };
+
+  try {
+    const data = await docClient.scan(params).promise();
+    const characterCounts = {};
+
+    // Loop through the data to count users for each character
+    data.Items.forEach((item) => {
+      const characterName = item.character;
+      if (characterCounts[characterName]) {
+        characterCounts[characterName] += 1;
+      } else {
+        characterCounts[characterName] = 1;
+      }
+    });
+
+    return { success: true, data: characterCounts };
+  } catch (err) {
+    logger.error('Error fetching character count from DynamoDB: %o', err);
+    return { success: false, error: 'Failed to fetch character counts' };
+  }
+};
+
+// API route to fetch user count for each character
+app.get('/character-count', async (req, res) => {
+  logger.info('Fetching user count for each character');
+
+  const result = await getUserCountByCharacter();
+
+  if (result.success) {
+    res.status(200).json(result.data);
+  } else {
+    res.status(500).json({ error: result.error });
+  }
+});
 
 
 
