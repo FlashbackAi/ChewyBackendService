@@ -1,13 +1,22 @@
-import express from 'express';
-import winston from 'winston';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import { AWS, AmazonCognitoIdentity, userPool,docClient, poolData } from './config.js';
-import { CognitoUserPool, CognitoUserAttribute } from 'amazon-cognito-identity-js';
-import { Account,AptosConfig, Aptos,Network,Ed25519PrivateKey,AccountAddress } from  '@aptos-labs/ts-sdk';
-import { aptosConfig } from './config.js';
-const https = require('https');
-const fs = require('fs');
+const express = require('express');
+const winston = require('winston');
+const cors = require('cors');
+const dotenv = require('dotenv');
+const { AWS, AmazonCognitoIdentity, userPool, docClient, poolData } = require('./config.js');
+const { CognitoUserPool, CognitoUserAttribute } = require('amazon-cognito-identity-js');
+const { Account, AptosConfig, Aptos, Network, Ed25519PrivateKey, AccountAddress } = require('@aptos-labs/ts-sdk');
+const { aptosConfig } = require('./config.js');
+
+// import express from 'express';
+// import winston from 'winston';
+// import cors from 'cors';
+// import dotenv from 'dotenv';
+// import { AWS, AmazonCognitoIdentity, userPool,docClient, poolData } from './config.js';
+// import { CognitoUserPool, CognitoUserAttribute } from 'amazon-cognito-identity-js';
+// import { Account,AptosConfig, Aptos,Network,Ed25519PrivateKey,AccountAddress } from  '@aptos-labs/ts-sdk';
+// import { aptosConfig } from './config.js';
+// const https = require('https');
+// const fs = require('fs');
 
 
 
