@@ -9,19 +9,6 @@ import { aptosConfig } from './config.js';
 import fs from 'fs';
 import https from 'https';
 
-// import express from 'express';
-// import winston from 'winston';
-// import cors from 'cors';
-// import dotenv from 'dotenv';
-// import { AWS, AmazonCognitoIdentity, userPool,docClient, poolData } from './config.js';
-// import { CognitoUserPool, CognitoUserAttribute } from 'amazon-cognito-identity-js';
-// import { Account,AptosConfig, Aptos,Network,Ed25519PrivateKey,AccountAddress } from  '@aptos-labs/ts-sdk';
-// import { aptosConfig } from './config.js';
-// const https = require('https');
-// const fs = require('fs');
-
-
-
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -360,7 +347,6 @@ app.post('/signup', async function (req, res) {
             data: {
             function: "0x1::managed_coin::register",  // Use the managed_coin::register function
             typeArguments: [`0xc26a8eda1c3ab69a157815183ddda88c89d6758ee491dd1647a70af2907ce074::coin::Chewy`],
-            // typeArguments: [`0xc26a8eda1c3ab69a157815183ddda88c89d6758ee491dd1647a70af2907ce074::coin::Chewy`],
             functionArguments: [],  // No arguments needed
             },
         });
@@ -451,11 +437,6 @@ app.post('/signup', async function (req, res) {
             executedTransaction.success,
             "Chewy" // Type of coin being transferred
           );
-      
-          // If the transaction is successful, update reward points for sender and receiver
-          // if (executedTransaction.success) {
-          //   await updateRewards(senderMobileNumber, recipientMobileNumber, amount);
-          // }
       
           return executedTransaction.success;
       
@@ -624,9 +605,7 @@ async function updateWalletTransaction(transactionId, senderEmail,recipientEmail
           
         //const recipientAddress = aptosConfig.RECIPIENT_ADDRESS;
         const transferAmount = amount ;  // Use provided amount or default
-        //const recipientWalletDetails = await fetchWalletDetails(recipientMobileNumber)
-  
-        // const status = await transferAptosCoins(recipientAddress, transferAmount);
+
         const status = await transferChewyCoins(recipientAddress, transferAmount,senderEmail, '');
   
         res.status(200).json({
@@ -648,7 +627,6 @@ async function updateWalletTransaction(transactionId, senderEmail,recipientEmail
   
         // Read sender's private key and recipient address from config
           
-        //const recipientAddress = aptosConfig.RECIPIENT_ADDRESS;
         const transferAmount = amount ;  // Use provided amount or default
         const recipientWalletDetails = await fetchWalletDetails(recipientEmail)
   
@@ -772,43 +750,9 @@ const updateUserDetails = async (email, updateFields) => {
 };
 
   
-
-
-
-
-//  // *** Comment these certificates while testing changes in local developer machine. And, uncomment while pushing to mainline***
-// const privateKey = fs.readFileSync('/etc/letsencrypt/live/flashback.wtf/privkey.pem', 'utf8');
-// const certificate = fs.readFileSync('/etc/letsencrypt/live/flashback.wtf/fullchain.pem', 'utf8');
-// const credentials = {
-//   key: privateKey,
-//   cert: certificate
-// }
-
-// Uncomment the following block of code for production HTTPS setup
-// import https from 'https'; // Make sure you import https if you're using it
-// const httpsServer = https.createServer(credentials, app);
-
-// httpsServer.listen(PORT, () => {
-//   logger.info(`Server is running on https://localhost:${PORT}`);
-//   httpsServer.keepAliveTimeout = 60000; // Increase keep-alive timeout
-//   httpsServer.headersTimeout = 65000; // Increase headers timeout
-// });
-
 // Use this for development testing and comment it out when using https for production
 const server = app.listen(PORT, () => {
   logger.info(`Server started on http://localhost:${PORT}`);
   server.keepAliveTimeout = 60000; // Increase keep-alive timeout
   server.headersTimeout = 65000; // Increase headers timeout
 });
-
-
-
-// const privateKey = fs.readFileSync('/etc/letsencrypt/live/52.4.169.223.nip.io/privkey.pem', 'utf8');
-// const certificate = fs.readFileSync('/etc/letsencrypt/live/52.4.169.223.nip.io/fullchain.pem', 'utf8');
-// const credentials = { key: privateKey, cert: certificate };
-
-// const httpsServer = https.createServer(credentials, app);
-
-// httpsServer.listen(PORT, '0.0.0.0', () => {
-//   console.log(`HTTPS Server is running on port ${PORT}`);
-// }); 
