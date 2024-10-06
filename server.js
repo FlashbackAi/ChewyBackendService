@@ -211,11 +211,11 @@ app.post('/signup', async function (req, res) {
       logger.info(`Aptos Wallet created for email: ${email} with wallet address: ${walletDetails.walletAddress}`);
   
       // Transfer Aptos coins to the newly created wallet
-      const transactionStatus = await transferAptosCoins(walletDetails.walletAddress, APTOS_AMOUNT || aptosConfig.DEFAULT_TRANSFER_AMOUNT,aptosConfig.SENDER_EMAIL, email);
+      // const transactionStatus = await transferAptosCoins(walletDetails.walletAddress, APTOS_AMOUNT || aptosConfig.DEFAULT_TRANSFER_AMOUNT,aptosConfig.SENDER_EMAIL, email);
   
-      if (transactionStatus !== true) {
-        throw new Error("Transaction failed");
-      }
+      // if (transactionStatus !== true) {
+      //   throw new Error("Transaction failed");
+      // }
   
       // Register the wallet with ChewyCoin store and transfer coins
       await registerChewyCoinStore(aptosAccount, aptosAccount.accountAddress);
@@ -225,7 +225,6 @@ app.post('/signup', async function (req, res) {
       return {
         message: 'Aptos Wallet created and coins transferred successfully',
         walletAddress: walletDetails.walletAddress,
-        transactionStatus: transactionStatus,
         balance: CHEWY_AMOUNT || aptosConfig.DEFAULT_TRANSFER_AMOUNT,
         status: 201
       };
@@ -275,75 +274,78 @@ app.post('/signup', async function (req, res) {
   };
 
   // Function to fund the account
-  const transferAptosCoins = async ( recipientAddress, amount, senderEmail,recipientEmail) => {
-    try {
-      // to derive an account with a private key and account address
-      const senderWalletDetails = await fetchWalletDetails(senderEmail);
-      const privateKeyHex = senderWalletDetails.encrypted_private_key.startsWith('0X')
-      ? senderWalletDetails.encrypted_private_key.slice(2) // Remove the '0x' prefix
-      : senderWalletDetails.encrypted_private_key;
+  // const transferAptosCoins = async ( recipientAddress, amount, senderEmail,recipientEmail) => {
+  //   try {
+  //     // to derive an account with a private key and account address
+  //     const senderWalletDetails = await fetchWalletDetails(senderEmail);
+  //     const privateKeyHex = senderWalletDetails.encrypted_private_key.startsWith('0X')
+  //     ? senderWalletDetails.encrypted_private_key.slice(2) // Remove the '0x' prefix
+  //     : senderWalletDetails.encrypted_private_key;
     
-      // Derive an account with a private key and account address
-      const privateKey = new Ed25519PrivateKey(privateKeyHex);
-      const address = AccountAddress.from(senderWalletDetails.wallet_address);
-      const senderAccount = Account.fromPrivateKey({ privateKey, address });
+  //     // Derive an account with a private key and account address
+  //     const privateKey = new Ed25519PrivateKey(privateKeyHex);
+  //     const address = AccountAddress.from(senderWalletDetails.wallet_address);
+  //     const senderAccount = Account.fromPrivateKey({ privateKey, address });
   
-      // Generate and sign the transaction
-      //Generate
-      const transaction = await aptosClient.transaction.build.simple({
-        sender: senderAccount.accountAddress,
-        data: {
-          // All transactions on Aptos are implemented via smart contracts.
-          type: 'entry_function_payload',
-          function: "0x1::aptos_account::transfer",
-         functionArguments: [recipientAddress, amount],
-        },
-      });
+  //     // Generate and sign the transaction
+  //     //Generate
+  //     const transaction = await aptosClient.transaction.build.simple({
+  //       sender: senderAccount.accountAddress,
+  //       data: {
+  //         // All transactions on Aptos are implemented via smart contracts.
+  //         type: 'entry_function_payload',
+  //         function: "0x1::aptos_account::transfer",
+  //        functionArguments: [recipientAddress, amount],
+  //       },
+  //     });
   
-      //Sign
-      const senderAuthenticator = aptosClient.transaction.sign({
-        signer: senderAccount,
-        transaction,
-      });
+  //     //Sign
+  //     const senderAuthenticator = aptosClient.transaction.sign({
+  //       signer: senderAccount,
+  //       transaction,
+  //     });
   
-      logger.info("Transaction generated and Signed Successfully");
-      // If the fee looks ok, continue to signing!
+  //     logger.info("Transaction generated and Signed Successfully");
+  //     // If the fee looks ok, continue to signing!
   
-      // Submit the transaction    
-      const committedTransaction = await aptosClient.transaction.submit.simple({
-        transaction,
-        senderAuthenticator,
-      });
-      logger.info(`Transaction submitted: ${committedTransaction.hash}`);
+  //     // Submit the transaction    
+  //     const committedTransaction = await aptosClient.transaction.submit.simple({
+  //       transaction,
+  //       senderAuthenticator,
+  //     });
+  //     logger.info(`Transaction submitted: ${committedTransaction.hash}`);
   
-      // Wait for confirmation
-      const executedTransaction = await aptosClient.waitForTransaction({ transactionHash: committedTransaction.hash });
-      logger.info(`Transaction confirmed: ${executedTransaction.success}`);
+  //     // Wait for confirmation
+  //     const executedTransaction = await aptosClient.waitForTransaction({ transactionHash: committedTransaction.hash });
+  //     logger.info(`Transaction confirmed: ${executedTransaction.success}`);
       
-      await updateWalletTransaction(
-        executedTransaction.hash, 
-        senderEmail,
-        recipientEmail, 
-        senderWalletDetails.wallet_address,         // Sender's wallet address (from_address)
-        recipientAddress,      // Receiver's wallet address (to_address)
-        amount, 
-        executedTransaction.success, 
-        "Aptos"                           // Type of coin being transferred
-      );
-      return executedTransaction.success;
+  //     await updateWalletTransaction(
+  //       executedTransaction.hash, 
+  //       senderEmail,
+  //       recipientEmail, 
+  //       senderWalletDetails.wallet_address,         // Sender's wallet address (from_address)
+  //       recipientAddress,      // Receiver's wallet address (to_address)
+  //       amount, 
+  //       executedTransaction.success, 
+  //       "Aptos"                           // Type of coin being transferred
+  //     );
+  //     return executedTransaction.success;
       
-    } catch (error) {
-      logger.error(`Error funding account: ${error.message}`);
-      throw new Error(error.message);
-    }
-  };
+  //   } catch (error) {
+  //     logger.error(`Error funding account: ${error.message}`);
+  //     throw new Error(error.message);
+  //   }
+  // };
 
   /** Register the receiver account to receive transfers for Chewy Coin. */
-    async function registerChewyCoinStore(receiver){
+    async function registerChewyCoinStore(account){
         try {
+
+          const feePayerAccount =  await getAccountInfo(aptosConfig.SENDER_EMAIL)
         // Build the transaction for registering the CoinStore
         const transaction = await aptosClient.transaction.build.simple({
-            sender: receiver.accountAddress,
+            sender: account.accountAddress,
+            withFeePayer: true,
             data: {
             function: "0x1::managed_coin::register",  // Use the managed_coin::register function
             typeArguments: [`0xc26a8eda1c3ab69a157815183ddda88c89d6758ee491dd1647a70af2907ce074::coin::Chewy`],
@@ -352,18 +354,24 @@ app.post('/signup', async function (req, res) {
         });
     
         const [userTransactionResponse] = await aptosClient.transaction.simulate.simple({
-            signerPublicKey: receiver.publicKey,
+            signerPublicKey: account.publicKey,
+            feePayerPublicKey: feePayerAccount.publicKey,
             transaction,
         });
         logger.info(userTransactionResponse)
     
         // Sign the transaction with the receiver's account
-        const senderAuthenticator = aptosClient.transaction.sign({ signer: receiver, transaction });
+        const senderAuthenticator = aptosClient.transaction.sign({ signer: account, transaction });
+        const feePayerAuthenticator = aptosClient.transaction.signAsFeePayer({
+          signer: feePayerAccount,
+          transaction
+        })
     
         // Submit the transaction to the blockchain
         const pendingTxn = await aptosClient.transaction.submit.simple({
             transaction,
-            senderAuthenticator,
+            senderAuthenticator:senderAuthenticator,
+            feePayerAuthenticator: feePayerAuthenticator,
         });
     
         console.log(`Transaction submitted. Hash: ${pendingTxn.hash}`);
@@ -378,22 +386,48 @@ app.post('/signup', async function (req, res) {
         throw new Error(error.message);
         }
     }
+
+    const getAccountInfo = async(email)=>{
+      try{
+    
+        // Fetch wallet details for the sender
+        const walletDetails = await fetchWalletDetails(email);
+        const privateKeyHex = walletDetails.encrypted_private_key.startsWith('0X')
+      ? walletDetails.encrypted_private_key.slice(2) // Remove the '0x' prefix
+      : walletDetails.encrypted_private_key;
+    
+        // Derive an account with a private key and account address
+        const privateKey = new Ed25519PrivateKey(privateKeyHex);
+        const address = AccountAddress.from(walletDetails.wallet_address);
+        const account = Account.fromPrivateKey({ privateKey, address });
+        return account;
+      }
+      catch(err){
+        return new Error(err.message);
+      }
+    }
+    
     const transferChewyCoins = async (recipientAddress, amount, senderEmail, recipientEmail) => {
         try {
-          // Fetch wallet details for the sender
-          const senderWalletDetails = await fetchWalletDetails(senderEmail);
-          const privateKeyHex = senderWalletDetails.encrypted_private_key.startsWith('0X')
-        ? senderWalletDetails.encrypted_private_key.slice(2) // Remove the '0x' prefix
-        : senderWalletDetails.encrypted_private_key;
+        //   // Fetch wallet details for the sender
+        //   const senderWalletDetails = await fetchWalletDetails(senderEmail);
+        //   const privateKeyHex = senderWalletDetails.encrypted_private_key.startsWith('0X')
+        // ? senderWalletDetails.encrypted_private_key.slice(2) // Remove the '0x' prefix
+        // : senderWalletDetails.encrypted_private_key;
       
-          // Derive an account with a private key and account address
-          const privateKey = new Ed25519PrivateKey(privateKeyHex);
-          const address = AccountAddress.from(senderWalletDetails.wallet_address);
-          const senderAccount = Account.fromPrivateKey({ privateKey, address });
+        //   // Derive an account with a private key and account address
+        //   const privateKey = new Ed25519PrivateKey(privateKeyHex);
+        //   const address = AccountAddress.from(senderWalletDetails.wallet_address);
+        //   const senderAccount = Account.fromPrivateKey({ privateKey, address });
+
+          const senderAccount = await getAccountInfo(senderEmail);
+          const parentAccount = await getAccountInfo(aptosConfig.SENDER_EMAIL);
+      
       
           // Generate and sign the transaction
           const transaction = await aptosClient.transaction.build.simple({
             sender: senderAccount.accountAddress,
+            withFeePayer:true,
             data: {
               type: 'entry_function_payload',
               function: '0x1::coin::transfer',
@@ -407,10 +441,15 @@ app.post('/signup', async function (req, res) {
             signer: senderAccount,
             transaction,
           });
+          const parentAccountAuthenticator = aptosClient.transaction.signAsFeePayer({
+            signer: parentAccount,
+            transaction
+          })
       
           logger.info("Transaction generated and Signed Successfully");
           const [userTransactionResponse] = await aptosClient.transaction.simulate.simple({
             signerPublicKey: senderAccount.publicKey,
+            feePayerPublicKey: parentAccount.publicKey,
             transaction,
         });
         logger.info(userTransactionResponse.max_gas_amount)
@@ -419,6 +458,7 @@ app.post('/signup', async function (req, res) {
           const committedTransaction = await aptosClient.transaction.submit.simple({
             transaction,
             senderAuthenticator,
+            feePayerAuthenticator : parentAccountAuthenticator,
           });
           logger.info(`Transaction submitted: ${committedTransaction.hash}`);
       
@@ -431,7 +471,7 @@ app.post('/signup', async function (req, res) {
             executedTransaction.hash,
             senderEmail,
             recipientEmail,
-            senderWalletDetails.wallet_address, // Sender's wallet address (from_address)
+            senderAccount.accountAddress.toString('hex'), // Sender's wallet address (from_address)
             recipientAddress, // Receiver's wallet address (to_address)
             amount,
             executedTransaction.success,
@@ -446,8 +486,8 @@ app.post('/signup', async function (req, res) {
         }
     };
 
-    const fetchWalletDetails = async (senderEmail) => {
-    if (!senderEmail) {
+    const fetchWalletDetails = async (email) => {
+    if (!email) {
         throw new Error("Email is required");
     }
 
@@ -455,17 +495,17 @@ app.post('/signup', async function (req, res) {
     const params = {
         TableName: 'wallet_details',
         Key: {
-        email: senderEmail
+        email: email
         }
     };
 
     try {
-        logger.info(`Fetching wallet for Email: ${senderEmail}`);
+        logger.info(`Fetching wallet for Email: ${email}`);
 
         // Fetch wallet from DynamoDB
         const result = await docClient.get(params).promise();
 
-        logger.info(`Fetched wallet for email: ${senderEmail}`);
+        logger.info(`Fetched wallet for email: ${email}`);
 
         // If no wallet found, throw an error
         if (!result || !result.Item) {
@@ -477,7 +517,7 @@ app.post('/signup', async function (req, res) {
 
     } catch (error) {
         // Log the error and rethrow it
-        logger.error(`Error fetching wallet for mail ${senderEmail}: ${error.message}`);
+        logger.error(`Error fetching wallet for mail ${email}: ${error.message}`);
         throw error;
     }
     };
@@ -649,7 +689,7 @@ async function updateWalletTransaction(transactionId, senderEmail,recipientEmail
     try {
       // Get wallet details from DynamoDB
       const walletDetails = await fetchWalletDetails(email);
-      const userDetails = await getUserObjectByUserPhoneNumber(email);
+      const userDetails = await getUserObjectByEmail(email);
   
       if (!walletDetails) {
         return res.status(404).json({ message: 'Wallet not found' });
@@ -672,7 +712,7 @@ async function updateWalletTransaction(transactionId, senderEmail,recipientEmail
     }
   });
   
-  async function getUserObjectByUserPhoneNumber(email){
+  async function getUserObjectByEmail(email){
     try{
       logger.info("getting user info for email : "+email);
       const params = {
