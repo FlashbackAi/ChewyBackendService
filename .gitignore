@@ -1,5 +1,13 @@
-node_modules
+# Dependencies
+node_modules/
+package-lock.json
 
-
+# Environment variables
 .env
-server/logs/application.log
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+application.log

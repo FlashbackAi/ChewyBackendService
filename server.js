@@ -1,32 +1,49 @@
 import express from 'express';
 import winston from 'winston';
 import cors from 'cors';
-import dotenv from 'dotenv';
-import { AWS, AmazonCognitoIdentity, userPool, docClient, poolData } from './config.js';
+const PORT = process.env.PORT || 5000;
+import { initializeConfig, getConfig } from './config.js';
+import {AWS} from './config.js';
 import { CognitoUserPool, CognitoUserAttribute } from 'amazon-cognito-identity-js';
 import { Account, AptosConfig, Aptos, Network, Ed25519PrivateKey, AccountAddress } from '@aptos-labs/ts-sdk';
-import { aptosConfig } from './config.js';
 import fs from 'fs';
 import https from 'https';
+import http from 'http';
 
-dotenv.config();
 const app = express();
-const PORT = process.env.PORT || 5000;
 const cognitoidentityserviceprovider = new AWS.CognitoIdentityServiceProvider();
 const userDataTableName = 'users';
 const walletDetailsTable = 'wallet_details';
 const userBucketName = 'chewyusersavedata';
 const walletTransactionsTable = 'wallet_transactions';
 
+
+const dynamoDB = new AWS.DynamoDB({ region: 'us-east-1' });
+const docClient = new AWS.DynamoDB.DocumentClient({ region: 'us-east-1' });
+
+const s3 = new AWS.S3({ // accessKey and SecretKey is being fetched from config.js
+  region: 'us-east-1' // Update with your AWS region 
+});
+
 // Aptos and chewy info
-const config = new AptosConfig({ network: Network.MAINNET});
-const aptosClient = new Aptos(config);
+// const config = new AptosConfig({ network: Network.MAINNET});
+// const aptosClient = new Aptos(config);
 const APTOS_AMOUNT = 30000000;
 const CHEWY_AMOUNT =1000;
 
+initializeConfig()
+.then(config => {
+
+  AWS.config.update({
+    region: 'us-east-1',
+    credentials: initializeConfig.awsCredentials,
+  });
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '15mb' }));
+
+const aptosConfig = new AptosConfig({ network: Network.MAINNET });
+const aptosClient = new Aptos(aptosConfig);
 
 
 
@@ -46,7 +63,6 @@ const logger = winston.createLogger({
     new winston.transports.File({ filename: 'logs/application.log' }),
   ],
 });
-
 
 app.post('/signup', async function (req, res) {
     try {   
@@ -176,6 +192,7 @@ app.post('/signup', async function (req, res) {
     logger.info(`Received request to create wallet for email: ${email}`);
     
     try {
+      const config = getConfig();
       // Check if the wallet already exists for the given email
       const existingWallet = await checkWalletExists(email);
   
@@ -219,13 +236,13 @@ app.post('/signup', async function (req, res) {
   
       // Register the wallet with ChewyCoin store and transfer coins
       await registerChewyCoinStore(aptosAccount, aptosAccount.accountAddress);
-      await transferChewyCoins(walletDetails.walletAddress, CHEWY_AMOUNT, aptosConfig.SENDER_EMAIL, email);
+      await transferChewyCoins(walletDetails.walletAddress, CHEWY_AMOUNT, config.aptos.SENDER_EMAIL, email);
   
       // Return wallet details and transaction status
       return {
         message: 'Aptos Wallet created and coins transferred successfully',
         walletAddress: walletDetails.walletAddress,
-        balance: CHEWY_AMOUNT || aptosConfig.DEFAULT_TRANSFER_AMOUNT,
+        balance: CHEWY_AMOUNT || config.aptos.DEFAULT_TRANSFER_AMOUNT,
         status: 201
       };
     } catch (error) {
@@ -341,7 +358,8 @@ app.post('/signup', async function (req, res) {
     async function registerChewyCoinStore(account){
         try {
 
-          const feePayerAccount =  await getAccountInfo(aptosConfig.SENDER_EMAIL)
+          const config = getConfig();
+          const feePayerAccount =  await getAccountInfo(config.aptos.SENDER_EMAIL)
         // Build the transaction for registering the CoinStore
         const transaction = await aptosClient.transaction.build.simple({
             sender: account.accountAddress,
@@ -409,19 +427,9 @@ app.post('/signup', async function (req, res) {
     
     const transferChewyCoins = async (recipientAddress, amount, senderEmail, recipientEmail) => {
         try {
-        //   // Fetch wallet details for the sender
-        //   const senderWalletDetails = await fetchWalletDetails(senderEmail);
-        //   const privateKeyHex = senderWalletDetails.encrypted_private_key.startsWith('0X')
-        // ? senderWalletDetails.encrypted_private_key.slice(2) // Remove the '0x' prefix
-        // : senderWalletDetails.encrypted_private_key;
-      
-        //   // Derive an account with a private key and account address
-        //   const privateKey = new Ed25519PrivateKey(privateKeyHex);
-        //   const address = AccountAddress.from(senderWalletDetails.wallet_address);
-        //   const senderAccount = Account.fromPrivateKey({ privateKey, address });
-
+          const config = getConfig();
           const senderAccount = await getAccountInfo(senderEmail);
-          const parentAccount = await getAccountInfo(aptosConfig.SENDER_EMAIL);
+          const parentAccount = await getAccountInfo(config.aptos.SENDER_EMAIL);
       
       
           // Generate and sign the transaction
@@ -660,7 +668,7 @@ async function updateWalletTransaction(transactionId, senderEmail,recipientEmail
   
   app.post('/transfer-chewy-coins', async (req, res) => {
     try {
-        const { amount, senderEmail,recipientEmail} = req.body;
+        const { amount,   senderEmail,recipientEmail} = req.body;
   
         // Log incoming request
         logger.info(`Transfer request received: amount = ${amount}`);
@@ -789,10 +797,15 @@ const updateUserDetails = async (email, updateFields) => {
   return result.Attributes;
 };
 
-  
-// Use this for development testing and comment it out when using https for production
+
+
 const server = app.listen(PORT, () => {
   logger.info(`Server started on http://localhost:${PORT}`);
   server.keepAliveTimeout = 60000; // Increase keep-alive timeout
   server.headersTimeout = 65000; // Increase headers timeout
+});
+})
+.catch((error) => {
+  console.error('Failed to initialize app due to config error:', error);
+  process.exit(1);  // Stop the server if config loading fails
 });

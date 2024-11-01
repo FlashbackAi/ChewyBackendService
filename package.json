@@ -13,6 +13,7 @@
   "license": "ISC",
   "dependencies": {
     "@aptos-labs/ts-sdk": "^1.28.0",
+    "@aws-sdk/client-secrets-manager": "^3.682.0",
     "amazon-cognito-identity-js": "^6.3.12",
     "aws-sdk": "^2.1691.0",
     "body-parser": "^1.20.3",
